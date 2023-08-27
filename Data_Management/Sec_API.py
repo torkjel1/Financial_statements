@@ -2,16 +2,22 @@
 import requests
 import pandas as pd
 from Data_Management.Data_Scraper import DataScraper
-from sec_api import QueryApi
+from sec_api import QueryApi, ExtractorApi, XbrlApi
 import json
 from datetime import datetime
 
+def financial_statement_decorator(func):
 
-#GET CIK NUMBER METHOD
+    def wrapper(self, url):
+        filing = self.finanical_statement_api.xbrl_to_json(htm_url=url)
+        return func(self, filing)
+    return wrapper
+
 class SecClient(DataScraper):
 
     COMPANY_TICKERS = None
     MAX_FILINGS = "50"
+
 
 
     def __init__(self, email, api_key):
@@ -25,10 +31,7 @@ class SecClient(DataScraper):
             10)  # pad number with leading 0s to make it a 10-digit number
         self.COMPANY_TICKERS = tickers
         self. query_api = QueryApi(api_key = self.api_key)
-
-
-
-
+        self.finanical_statement_api = XbrlApi(self.api_key)
 
     def get_10q_urls(self, ticker: str, start_year: str, end_year = str(datetime.now().year) ) -> list: #default end_year set to today's year
 
@@ -46,10 +49,22 @@ class SecClient(DataScraper):
         filing_urls = list(map(lambda x: x["linkToFilingDetails"], response["filings"]))
         return filing_urls
 
+    @financial_statement_decorator
+    def get_balance_sheet(self, filingl):
 
-s = SecClient("torkjel@hotmail.com", "ad255c1c23fcdd341df8bb754f07e58c28d4a7f75cc89220c99560d4c6663604")
+        return filingl["BalanceSheets"]
 
-print(s.get_10q_urls("TSLA", "2020"))
+    @financial_statement_decorator
+    def get_is(self, filing):
+
+        return filing["StatementsOfIncome"]
+
+    @financial_statement_decorator
+    def get_cashflow_statement(self, filing):
+
+        return filing["StatementsOfCashflows"]
+
+
 
 
 
