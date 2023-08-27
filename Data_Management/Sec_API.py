@@ -5,6 +5,7 @@ from Data_Management.Data_Scraper import DataScraper
 from sec_api import QueryApi, ExtractorApi, XbrlApi
 import json
 from datetime import datetime
+import numpy as np
 
 def financial_statement_decorator(func):
 
@@ -17,8 +18,6 @@ class SecClient(DataScraper):
 
     COMPANY_TICKERS = None
     MAX_FILINGS = "50"
-
-
 
     def __init__(self, email, api_key):
 
@@ -64,6 +63,20 @@ class SecClient(DataScraper):
 
         return filing["StatementsOfCashflows"]
 
+
+    def create_statement(self, statement_data: dict):
+
+        df = pd.DataFrame()
+        for key, value in statement_data.items():
+            valid_datapoints = [d for d in value if not d.get("segment")]
+            for val in valid_datapoints:
+                try:
+                    df.loc[key, val["period"]["instant"]] = val["value"]
+                except KeyError:
+                    df.loc[key, val["period"]["instant"]] = np.NAN
+
+
+        return df
 
 
 
